@@ -17,8 +17,6 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _mapController =
-      Completer<GoogleMapController>();
   GoogleMapController? mapController;
 
   LatLng? startPoint;
@@ -29,17 +27,14 @@ class _MapPageState extends State<MapPage> {
   final Set<Marker> _markers = <Marker>{};
   final Set<Polyline> _directionPolyline = {};
   List<LatLng> polylineCoordinates = [];
-
   LatLng? currentCarPosition;
   List<LatLng> routeCoordinates = [];
-
   int currentCoordinateIndex = 0;
   bool isMoving = false;
 
   void _onMapCreated(GoogleMapController controller) {
-    _mapController.complete(controller);
     mapController = controller;
-    _getPolyline();
+    _addPolyLine();
   }
 
   Future<void> setStartPoint(LatLng position) async {
@@ -71,54 +66,51 @@ class _MapPageState extends State<MapPage> {
       context: context,
       builder: (context) {
         // Create and return a widget with car details
-        return SizedBox(height: 100, child: CarDetailsWidget());
+        return const SizedBox(height: 100, child: CarDetailsWidget());
       },
     );
   }
 
   void addPoint(LatLng point) {
-    setState(() {
-      if (startPoint == null) {
-        setStartPoint(point);
+    if (startPoint == null) {
+      setStartPoint(point);
 
-        _markers.add(Marker(
-            markerId: const MarkerId('start'),
-            position: routeCoordinates.first,
-            icon: start ??
-                BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueGreen),
-            onTap: showCarDetails));
-      } else if (endPoint == null) {
-        setEndPoint(point);
-        _markers.add(Marker(
-          markerId: const MarkerId('end'),
-          position: routeCoordinates.last,
-          icon: stop ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ));
-        _getPolyline();
-      } else if (currentCarPosition != null) {
-        setEndPoint(point);
+      _markers.add(Marker(
+          markerId: const MarkerId('start'),
+          position: routeCoordinates.first,
+          icon: start ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          onTap: showCarDetails));
+    } else if (endPoint == null) {
+      setEndPoint(point);
+      _markers.add(Marker(
+        markerId: const MarkerId('end'),
+        position: routeCoordinates.last,
+        icon: stop ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      ));
+      _addPolyLine();
+      startCarMovement();
+    } else if (currentCarPosition != null) {
+      setState(() {
         _markers.add(Marker(
           markerId: const MarkerId('car'),
-          position: currentCarPosition!,
+          position: currentCarPosition ?? startPoint!,
           icon: carIcon1 ??
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         ));
-        _getPolyline();
-      }
-
-      else {
-        setStartPoint(point);
-        reset();
-      }
-    });
+        startCarMovement();
+      });
+    } else {
+      setStartPoint(point);
+      reset();
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    _getPolyline();
+    _addPolyLine();
     getCarIcon();
   }
 
@@ -126,7 +118,7 @@ class _MapPageState extends State<MapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: toggleCarMovement,
+        onPressed: () => toggleCarMovement(),
         child: Icon(isMoving ? Icons.stop : Icons.play_arrow),
       ),
       body: Column(
@@ -171,7 +163,7 @@ class _MapPageState extends State<MapPage> {
     carIcon1 = BitmapDescriptor.fromBytes(carIcon);
   }
 
-  _getPolyline() async {
+  _addPolyLine() async {
     Polyline polyLine = Polyline(
         polylineId: const PolylineId('direction'),
         color: Colors.green,
@@ -186,28 +178,34 @@ class _MapPageState extends State<MapPage> {
     _directionPolyline.add(polyLine);
   }
 
-  void toggleCarMovement() {
-    if (isMoving) {
-      stopCarMovement();
-    } else {
-      startCarMovement();
-    }
+  toggleCarMovement() {
+    setState(() {
+      if (isMoving) {
+        stopCarMovement();
+      } else {
+        startCarMovement();
+      }
+    });
   }
 
   void startCarMovement() {
-    if (currentCoordinateIndex < routeCoordinates.length - 1) {
-      isMoving = true;
-      animateCarMovement(routeCoordinates[currentCoordinateIndex],
-          routeCoordinates[currentCoordinateIndex + 1]);
-    }
+    setState(() {
+      if (currentCoordinateIndex < routeCoordinates.length - 1) {
+        animateCarMovement(routeCoordinates[currentCoordinateIndex],
+            routeCoordinates[currentCoordinateIndex + 1]);
+        isMoving = true;
+      }
+    });
   }
 
   void stopCarMovement() {
-    isMoving = false;
+    setState(() {
+      isMoving = false;
+    });
   }
 
   void animateCarMovement(LatLng from, LatLng to) {
-    const duration = Duration(milliseconds: 1000);
+    const duration = Duration(milliseconds: 5);
     final distance = LatLngUtil.distance(
         from.latitude, from.longitude, to.latitude, to.longitude);
     final speed = distance / duration.inSeconds;
@@ -228,7 +226,7 @@ class _MapPageState extends State<MapPage> {
     final stepLng = (to.longitude - from.longitude) / totalSteps;
 
     final stopwatch = Stopwatch()..start();
-    Timer.periodic(const Duration(milliseconds: 500), (timer) {
+    Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (stopwatch.elapsed < duration) {
         final step = (stopwatch.elapsed.inMilliseconds / 250).floor();
         final lat = from.latitude + step * stepLat;
@@ -237,7 +235,7 @@ class _MapPageState extends State<MapPage> {
 
         setState(() {
           currentCarPosition = position;
-          print("aaaaaaaa$currentCarPosition");
+          print("position updating$currentCarPosition");
         });
       } else {
         timer.cancel();
