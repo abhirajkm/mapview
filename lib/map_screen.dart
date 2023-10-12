@@ -106,7 +106,6 @@ class _MapPageState extends State<MapPage> {
       reset();
     }
   }
-
   @override
   void initState() {
     super.initState();
