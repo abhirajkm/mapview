@@ -9,7 +9,6 @@ import 'package:mapviewapp/utils/images.dart';
 import 'package:mapviewapp/utils/view.dart';
 import 'package:provider/provider.dart';
 
-
 class MapViewScreen extends StatefulWidget {
   const MapViewScreen({super.key});
 
@@ -18,7 +17,6 @@ class MapViewScreen extends StatefulWidget {
 }
 
 class _MapViewScreenState extends State<MapViewScreen> {
-
   GoogleMapController? mapController;
   Set<Polyline> polylines = {};
   LatLng? currentCarPosition;
@@ -28,8 +26,6 @@ class _MapViewScreenState extends State<MapViewScreen> {
   BitmapDescriptor? stop;
   BitmapDescriptor? car;
   Timer? _timer;
-
-
 
   getIcon() async {
     final Uint8List startIcon = await getBytesFromAsset(iconStart);
@@ -55,48 +51,38 @@ class _MapViewScreenState extends State<MapViewScreen> {
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             _timer?.cancel();
-            Provider.of<MapProvider>(context,listen: false).reset();
+            Provider.of<MapProvider>(context, listen: false).reset();
             setState(() {
               polylines.clear();
-
             });
           },
           child: Icon(Icons.clear),
         ),
-        body: Consumer<MapProvider>(
-          builder: (context,v,child) {
-            return GoogleMap(
-              onMapCreated: (controller) {
-                mapController = controller;
-                //setState(() {
-                //  animateCarMovement();
-                //});
-              },
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(9.5916, 76.5222),
-                zoom: 12.0,
-              ),
-              markers: v.markers,
-              polylines: <Polyline>{
-                if (v.routeCoordinates != null)
-                  Polyline(
-                    polylineId: const PolylineId("route"),
-                    color: Colors.green,
-                    points: v.routeCoordinates,
-                  ),
-              },
-              onTap: (LatLng position) {
-
-                  setState(() {
-
-                      markerPoints(position);
-
-                });
-              },
-            );
-          }
-        )
-      );
+        body: Consumer<MapProvider>(builder: (context, v, child) {
+          return GoogleMap(
+            onMapCreated: (controller) {
+              mapController = controller;
+            },
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(9.5916, 76.5222),
+              zoom: 12.0,
+            ),
+            markers: v.markers,
+            polylines: <Polyline>{
+              if (v.routeCoordinates != null)
+                Polyline(
+                  polylineId: const PolylineId("route"),
+                  color: Colors.green,
+                  points: v.routeCoordinates,
+                ),
+            },
+            onTap: (LatLng position) {
+              setState(() {
+                markerPoints(position);
+              });
+            },
+          );
+        }));
   }
 
   Future<void> markerPoints(LatLng position) async {
@@ -106,22 +92,18 @@ class _MapViewScreenState extends State<MapViewScreen> {
       map.markers.add(Marker(
           markerId: const MarkerId("source"),
           position: map.routeCoordinates.first,
-          icon:start??
+          icon: start ??
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan)));
     } else if (map.endPoint == null) {
       map.setEndPoint(position);
       map.markers.add(
         Marker(
-          markerId: const MarkerId("destination"),
-          position: map.routeCoordinates.last,
-          icon: stop!
-        ),
+            markerId: const MarkerId("destination"),
+            position: map.routeCoordinates.last,
+            icon: stop!),
       );
 
-
-       animateCarMovement();
-
-
+      animateCarMovement();
     } else {
       _timer?.cancel();
       map.reset();
@@ -131,23 +113,21 @@ class _MapViewScreenState extends State<MapViewScreen> {
     }
   }
 
-
-  void animateCarMovement()  {
+  void animateCarMovement() {
     final map = Provider.of<MapProvider>(context, listen: false);
     Future.delayed(const Duration(seconds: 2), () {
       if (currentCoordinateIndex < map.routeCoordinates.length - 1) {
         final from = map.routeCoordinates[currentCoordinateIndex];
         final to = map.routeCoordinates[currentCoordinateIndex + 1];
 
+        double fraction = 0.0;
+        const duration = Duration(seconds: 1);
 
-        double fraction = 0.0; const duration = Duration(seconds: 1);
+        mapController?.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(target: from, zoom: 12.0),
+        ));
 
-
-          mapController?.animateCamera(CameraUpdate.newCameraPosition(
-            CameraPosition(target: from, zoom: 12.0),
-          ));
-
-        _timer  = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+        _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
           fraction += 16 / duration.inMilliseconds;
           if (fraction < 1.0) {
             final lat = lerpDouble(from.latitude, to.latitude, fraction);
@@ -156,7 +136,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
 
             setState(() {
               currentCarPosition = LatLng(lat!, lng!);
-             map.updateMarker(currentCarPosition!,car!,showCarDetails);
+              map.updateMarker(currentCarPosition!, car!, showCarDetails);
               carRotation = rotation;
               debugPrint("Current Car Position => $currentCarPosition");
             });
@@ -171,8 +151,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
   }
 
   Future<Uint8List> getBytesFromAsset(
-      String path,
-      ) async {
+    String path,
+  ) async {
     ByteData data = await rootBundle.load(path);
     ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
         targetWidth: 70);
@@ -181,6 +161,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
         .buffer
         .asUint8List();
   }
+
   void showCarDetails() {
     showModalBottomSheet(
       context: context,
@@ -191,9 +172,6 @@ class _MapViewScreenState extends State<MapViewScreen> {
   }
 }
 
-
-
-
 class CarDetailsWidget extends StatelessWidget {
   const CarDetailsWidget({super.key});
 
@@ -202,13 +180,15 @@ class CarDetailsWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        children:  [
+        children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children:  [
+            children: [
               const Text('Moving Car Details',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              IconButton(onPressed: ()=>Navigator.pop(context), icon: const Icon(Icons.close_rounded))
+              IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded))
             ],
           ),
           const Text('Model: Kia'),
