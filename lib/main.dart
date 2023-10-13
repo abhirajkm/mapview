@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mapviewapp/map_screen.dart';
-import 'package:mapviewapp/mapnavigation.dart';
+import 'package:mapviewapp/mapScreen.dart';
 import 'package:mapviewapp/providers/index.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +19,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
         ),
-        home:    MapViewScreen(),
+        home:    const MapViewScreen(),
       ),
     );
   }
